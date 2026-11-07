@@ -3,7 +3,7 @@
 
 Usage:
   python3 audit.py --space-id <SPACE_ID> --out manifest.tsv
-  python3 audit.py --all-team --exclude-space-id 7374773704112406532 --out manifest.tsv
+  python3 audit.py --all-team --exclude-space-id <EXCLUDE_SPACE_ID> --out manifest.tsv
 """
 
 import argparse
