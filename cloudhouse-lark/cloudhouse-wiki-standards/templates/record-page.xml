@@ -1,0 +1,27 @@
+<title>{{TITLE}}</title>
+
+<p>{{USAGE}}</p>
+
+<h2>本期记录</h2>
+<table>
+  <colgroup><col width="120"/><col width="260"/><col width="160"/><col width="220"/></colgroup>
+  <thead>
+    <tr>
+      <th background-color="light-gray"><p>日期</p></th>
+      <th background-color="light-gray"><p>事项</p></th>
+      <th background-color="light-gray"><p>结果/状态</p></th>
+      <th background-color="light-gray"><p>备注</p></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><p>待补充</p></td>
+      <td><p>待补充：从最近一次记录开始填写</p></td>
+      <td><p>待补充</p></td>
+      <td><p>待补充</p></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>待跟进</h2>
+<checkbox done="false">待补充：需要跟进的事项</checkbox>

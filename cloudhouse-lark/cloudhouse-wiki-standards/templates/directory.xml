@@ -1,0 +1,27 @@
+<title>{{TITLE}}</title>
+
+<blockquote><p>本页为索引页</p></blockquote>
+
+<h2>页面指引</h2>
+<p>{{GUIDANCE}}</p>
+
+<h2>子页面索引</h2>
+<table>
+  <colgroup><col width="180"/><col width="300"/><col width="300"/></colgroup>
+  <thead>
+    <tr>
+      <th background-color="light-gray"><p>分类</p></th>
+      <th background-color="light-gray"><p>文档</p></th>
+      <th background-color="light-gray"><p>说明</p></th>
+    </tr>
+  </thead>
+  <tbody>
+{{INDEX_ROWS}}
+  </tbody>
+</table>
+
+<h2>页面结构</h2>
+<whiteboard type="mermaid">mindmap
+  root(({{TITLE}}))
+{{MINDMAP}}
+</whiteboard>

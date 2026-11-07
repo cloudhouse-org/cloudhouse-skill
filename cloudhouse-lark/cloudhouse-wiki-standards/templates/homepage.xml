@@ -1,0 +1,60 @@
+<title>首页</title>
+
+<blockquote><p>本页为索引页</p></blockquote>
+
+<callout emoji="📚" background-color="light-blue" border-color="blue">
+  <p>欢迎来到<b>{{SPACE_NAME}}</b>。{{ONE_LINE_INTRO}}</p>
+</callout>
+
+<h1>🎯 愿景和目标</h1>
+<p>{{VISION_PARAGRAPH}}</p>
+<ul>
+  <li><b>{{VISION_1_TITLE}}</b>：{{VISION_1_TEXT}}</li>
+  <li><b>{{VISION_2_TITLE}}</b>：{{VISION_2_TEXT}}</li>
+  <li><b>{{VISION_3_TITLE}}</b>：{{VISION_3_TEXT}}</li>
+</ul>
+
+<h1>⛳️ 知识空间简介</h1>
+<p>{{SPACE_INTRO}}</p>
+<whiteboard type="mermaid">mindmap
+  root(({{SPACE_NAME}}))
+{{MINDMAP}}
+</whiteboard>
+<p>上方思维导图展示了知识库的完整层级结构；全部文档的直达链接见下方“⭐️ 常用文档和链接”。</p>
+
+<h1>⭐️ 常用文档和链接</h1>
+<p>本空间共 <b>{{TOTAL}}</b> 个节点，其中首页 1 个；下表收录其余 <b>{{COUNT}}</b> 个节点，点击文档名即可跳转；带“└”的条目为上一行的子文档。</p>
+<table>
+  <colgroup><col width="248"/><col width="250"/><col width="240"/></colgroup>
+  <thead>
+    <tr>
+      <th background-color="light-gray"><p>分类</p></th>
+      <th background-color="light-gray"><p>文档</p></th>
+      <th background-color="light-gray"><p>说明</p></th>
+    </tr>
+  </thead>
+  <tbody>
+{{INDEX_ROWS}}
+  </tbody>
+</table>
+
+<h1>💡 知识空间帮助</h1>
+<callout emoji="🌱" background-color="light-green" border-color="green">
+  <p><b>新人快速上手</b></p>
+  <ol>
+    <li>通读本页思维导图，建立全库结构印象；</li>
+    <li>{{START_HERE_2}}</li>
+    <li>{{START_HERE_3}}</li>
+  </ol>
+</callout>
+<callout emoji="📝" background-color="light-yellow" border-color="yellow">
+  <p><b>内容维护约定</b></p>
+  <ul>
+    <li>新增页面请挂到对应目录下，并同步本页索引与思维导图；</li>
+    <li>易变信息（密码、排班、负责人）变更后及时更新；</li>
+    <li>发现失效链接或过时内容，请联系空间管理员。</li>
+  </ul>
+</callout>
+
+<hr/>
+<p>文档版本：{{VERSION}}｜维护人：{{OWNER}}｜节点增减后请同步更新思维导图与索引表。</p>

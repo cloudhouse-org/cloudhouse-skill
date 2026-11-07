@@ -1,0 +1,13 @@
+<title>{{TITLE}}</title>
+
+<h2>页面定位</h2>
+<p>{{ONE_LINE_POSITION}}</p>
+
+<h2>适用对象</h2>
+<p>{{AUDIENCE}}</p>
+
+<h2>待补充说明</h2>
+<checkbox done="false">待补充：{{TODO_1}}</checkbox>
+<checkbox done="false">待补充：{{TODO_2}}</checkbox>
+<checkbox done="false">待补充：{{TODO_3}}</checkbox>
+<checkbox done="false">待补充：{{TODO_4}}</checkbox>
