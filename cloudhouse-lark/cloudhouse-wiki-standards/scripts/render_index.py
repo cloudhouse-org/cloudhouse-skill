@@ -8,10 +8,14 @@ Directory mode (grouped by direct child, colored category column):
 Home mode (optional explicit groups):
   python3 render_index.py --manifest manifest.json --target-node <HOME_NODE> \
     --mode home --groups groups.json --descriptions descriptions.json --out index.xml
+
+Set --base-url or LARK_WIKI_BASE_URL to the tenant wiki root,
+e.g. https://<tenant>.feishu.cn/wiki/ .
 """
 
 import argparse
 import json
+import os
 import sys
 from html import escape
 
@@ -122,9 +126,14 @@ def main():
     ap.add_argument("--mode", choices=["directory", "home"], required=True)
     ap.add_argument("--groups", default="")
     ap.add_argument("--descriptions", default="")
-    ap.add_argument("--base-url", default="https://jwo4yyi5n79.feishu.cn/wiki/")
+    ap.add_argument("--base-url", default=os.environ.get("LARK_WIKI_BASE_URL", ""))
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
+    if not args.base_url:
+        raise SystemExit(
+            "--base-url or LARK_WIKI_BASE_URL is required, "
+            "e.g. https://<tenant>.feishu.cn/wiki/"
+        )
 
     data = load(args.manifest)
     nodes = data["nodes"] if isinstance(data, dict) else data

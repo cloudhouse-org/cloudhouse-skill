@@ -2,7 +2,7 @@
 """Read-only wiki audit: traverse nodes, measure doc bodies, classify pages.
 
 Usage:
-  python3 audit.py --space-id 7690792226833664981 --out manifest.tsv
+  python3 audit.py --space-id <SPACE_ID> --out manifest.tsv
   python3 audit.py --all-team --exclude-space-id 7374773704112406532 --out manifest.tsv
 """
 

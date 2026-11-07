@@ -1,6 +1,6 @@
 ---
 name: cloudhouse-wiki-standards
-version: 2.0.0
+version: 2.0.1
 description: "大云屋团队知识库统一规范：盘点空间、识别空白/薄页/过时索引，按首页、目录页、内容页、记录页模板生成或修订飞书 Wiki，并完成链接校验与回滚。替代原 lark-wiki-homepage；当用户要求检查/整理/补全团队知识库、统一页面样式、优化首页或目录页时使用。"
 metadata:
   requires:
@@ -79,7 +79,9 @@ lark-cli wiki +space-list --as user --format json
 优先使用本 skill 的只读审计脚本：
 
 ```bash
-python3 /Users/lin/.qoder-cn/skills/cloudhouse-wiki-standards/scripts/audit.py \
+# SKILL_DIR 为本技能目录；默认安装路径如下，克隆仓库时改成实际路径
+SKILL_DIR="${SKILL_DIR:-$HOME/.qoder-cn/skills/cloudhouse-wiki-standards}"
+python3 "$SKILL_DIR/scripts/audit.py" \
   --space-id <SPACE_ID> \
   --out /path/to/.local/wiki-audit/manifest.tsv
 ```
@@ -110,7 +112,7 @@ lark-cli docs +history-list --doc <OBJ_TOKEN> --page-size 1 --as user --format j
 
 ### Step 5：生成与预检
 
-按 [`references/page-templates.md`](references/page-templates.md) 选择模板。目录页索引表用 `scripts/render_index.py`，页面结构图用 `scripts/render_mindmap.py`。XML 写本地文件，用 `@文件` 传参，避免 shell 转义。
+按 [`references/page-templates.md`](references/page-templates.md) 选择模板。目录页索引表用 `scripts/render_index.py`，页面结构图用 `scripts/render_mindmap.py`。`render_index.py` 需要租户 wiki 根地址：`--base-url "https://<tenant>.feishu.cn/wiki/"` 或环境变量 `LARK_WIKI_BASE_URL`。XML 写本地文件，用 `@文件` 传参，避免 shell 转义。
 
 ```bash
 lark-cli docs +script --command parse --content @draft.xml --as user --format json

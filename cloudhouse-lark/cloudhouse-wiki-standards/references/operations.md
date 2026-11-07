@@ -19,8 +19,10 @@
 ## 2. 盘点
 
 ```bash
-python3 /Users/lin/.qoder-cn/skills/cloudhouse-wiki-standards/scripts/audit.py \
-  --space-id 7690792226833664981 \
+# SKILL_DIR 为本技能目录；默认安装路径如下，克隆仓库时改成实际路径
+SKILL_DIR="${SKILL_DIR:-$HOME/.qoder-cn/skills/cloudhouse-wiki-standards}"
+python3 "$SKILL_DIR/scripts/audit.py" \
+  --space-id <SPACE_ID> \
   --out .local/wiki-audit/manifest.tsv
 ```
 

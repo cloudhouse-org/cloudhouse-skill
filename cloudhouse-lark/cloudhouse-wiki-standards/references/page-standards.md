@@ -59,7 +59,7 @@
 
 ## 6. 链接
 
-- 内链统一：`https://jwo4yyi5n79.feishu.cn/wiki/<node_token>`。
+- 内链统一：`https://<tenant>.feishu.cn/wiki/<node_token>`。
 - 链接文字用节点标题；节点标题有尾随空格时，显示文字可 trim，但链接 token 不变。
 - 不要在索引表里用 `<cite>` 代替 `<a>`：`<cite>` 在批量校验时不便提取 token，`<a>` 更稳定。
 - 跨空间链接也用完整 wiki URL；只在确有业务关系时添加。

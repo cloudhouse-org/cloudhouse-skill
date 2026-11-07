@@ -245,6 +245,13 @@ lark-cli docs +whiteboard-update --whiteboard-token <TOKEN> \
 
 ## 6. 索引表片段生成
 
+`render_index.py` 需要租户 wiki 根地址。二选一：
+
+```bash
+export LARK_WIKI_BASE_URL="https://<tenant>.feishu.cn/wiki/"
+# 或每条命令加 --base-url "https://<tenant>.feishu.cn/wiki/"
+```
+
 ```bash
 python3 scripts/render_index.py \
   --manifest manifest.json \
@@ -265,6 +272,8 @@ python3 scripts/render_index.py \
   --descriptions descriptions.json \
   --out index.xml
 ```
+
+未设置 `LARK_WIKI_BASE_URL` 时，请在每条命令中显式传 `--base-url "https://<tenant>.feishu.cn/wiki/"`。
 
 `groups.json` 结构：`[{"title": "板块入口", "tokens": ["...", "..."]}, ...]`；`descriptions.json` 是 `{"<node_token>": "说明"}`。token 必须存在于 manifest，否则脚本报错。
 - 输出只包含 `<tr>...</tr>`，直接替换模板里的 `{{INDEX_ROWS}}`。
