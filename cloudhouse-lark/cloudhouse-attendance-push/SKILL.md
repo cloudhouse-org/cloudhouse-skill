@@ -71,7 +71,23 @@ python3 "$SKILL_DIR/scripts/build_leader_cards.py" --summary summary.json --lead
 
 同样先发一张样板给请求者、批准后批量；manifest key=`att-leader-<止MMDD>-<key>`，expect=考勤组值；send_cards + verify_cards 复用。
 
-## Step 6：群公告（两类推送核验通过后）
+## Step 6：管理群总览（两类推送核验通过后）
+
+生成各组总览（达标数/总时长/人均，不写组长与要求标注），先私聊发请求者样板，批准后发「大云屋管理团队」群（chat_id 按群名 `im +chat-search --query 管理团队 --as bot` 运行时解析）：
+
+```bash
+python3 "$SKILL_DIR/scripts/build_overview_card.py" --summary summary.json --leaders leaders.json \
+  --out cards/overview.json --rules-url <RULES_URL>
+lark-cli im +messages-send --as bot --user-id <请求者open_id> --msg-type interactive \
+  --content @cards/overview.json --idempotency-key att-overview-sample-<止MMDD>
+# —— 明确批准后 ——
+lark-cli im +messages-send --as bot --chat-id <管理群CHAT_ID> --msg-type interactive \
+  --content @cards/overview.json --idempotency-key att-overview-<止MMDD>
+```
+
+mget 回读核验：sender 为 bot、未撤回、内容含各组行与全员达标数。
+
+## Step 7：群公告（两类推送核验通过后）
 
 向「云屋水群」「云屋【禁】水群」发 @所有人 通知。chat_id 运行时按群名解析（bot 须在群内），不写入仓库：
 
@@ -83,7 +99,7 @@ lark-cli im +messages-send --as bot --chat-id <CHAT_ID> --idempotency-key att-an
 
 mget 核验：sender 为 bot、未撤回、content 含 `@_all`（@所有人 的服务端规范化）。
 
-## Step 7：汇报
+## Step 8：汇报
 
 成功 X/N、失败名单+原因+建议、零工时名单、各组达标 X/Y、回读核验结果、日志路径、群公告结果。失败者修复后原键补发。
 
@@ -101,6 +117,7 @@ mget 核验：sender 为 bot、未撤回、content 含 `@_all`（@所有人 的�
 | [`scripts/build_mapping.py`](scripts/build_mapping.py) | 名册精确匹配，缺失/冲突列出 |
 | [`scripts/build_cards.py`](scripts/build_cards.py) | 成员卡（标准文案） |
 | [`scripts/build_leader_cards.py`](scripts/build_leader_cards.py) | 组长卡（达标/差额） |
+| [`scripts/build_overview_card.py`](scripts/build_overview_card.py) | 管理群各组总览卡（达标/总时长/人均） |
 | [`scripts/send_cards.py`](scripts/send_cards.py) | 串行发送+幂等+留痕 |
 | [`scripts/verify_cards.py`](scripts/verify_cards.py) | mget 全量回读核验 |
 | [`references/standards.md`](references/standards.md) | 口径权威：窗口/算法/文案/审批/陷阱 |
