@@ -71,9 +71,21 @@ python3 "$SKILL_DIR/scripts/build_leader_cards.py" --summary summary.json --lead
 
 同样先发一张样板给请求者、批准后批量；manifest key=`att-leader-<止MMDD>-<key>`，expect=考勤组值；send_cards + verify_cards 复用。
 
-## Step 6：汇报
+## Step 6：群公告（两类推送核验通过后）
 
-成功 X/N、失败名单+原因+建议、零工时名单、各组达标 X/Y、回读核验结果、日志路径。失败者修复后原键补发。
+向「云屋水群」「云屋【禁】水群」发 @所有人 通知。chat_id 运行时按群名解析（bot 须在群内），不写入仓库：
+
+```bash
+lark-cli im +chat-search --query 水群 --as bot --format json   # 取两个群 chat_id
+lark-cli im +messages-send --as bot --chat-id <CHAT_ID> --idempotency-key att-announce-<群key>-<止MMDD> \
+  --text $'<at user_id="all"></at> 上周考勤情况已推送给各组组长和26级成员本人，请注意查收；如有疑问请联系组长。'
+```
+
+mget 核验：sender 为 bot、未撤回、content 含 `@_all`（@所有人 的服务端规范化）。
+
+## Step 7：汇报
+
+成功 X/N、失败名单+原因+建议、零工时名单、各组达标 X/Y、回读核验结果、日志路径、群公告结果。失败者修复后原键补发。
 
 ## 硬规则
 
