@@ -1,7 +1,7 @@
 ---
 name: cloudhouse-wiki-standards
-version: 2.0.1
-description: "大云屋团队知识库统一规范：盘点空间、识别空白/薄页/过时索引，按首页、目录页、内容页、记录页模板生成或修订飞书 Wiki，并完成链接校验与回滚。替代原 lark-wiki-homepage；当用户要求检查/整理/补全团队知识库、统一页面样式、优化首页或目录页时使用。"
+version: 2.1.0
+description: "大云屋团队知识库统一规范：盘点空间、识别空白/薄页/过时索引，按首页、纯索引页、半索引页、内容页、记录页模板生成或修订飞书 Wiki，并完成链接校验与回滚。替代原 lark-wiki-homepage；当用户要求检查/整理/补全团队知识库、统一页面样式、优化首页或目录页时使用。"
 metadata:
   requires:
     bins: ["lark-cli"]
@@ -21,7 +21,7 @@ metadata:
 ## 适用场景
 
 - 检查某个/多个知识空间是否有空白页、薄页、失效索引。
-- 补写空白目录页、章节导航页、空间首页。
+- 补写空白索引页、章节导航页、空间首页。
 - 统一页面结构、元数据、callout、表格、链接写法。
 - 为后续维护生成可复用的页面模板和审计脚本。
 
@@ -29,29 +29,47 @@ metadata:
 
 | 类型 | 判定 | 动作 |
 |---|---|---|
-| 纯空白页 | 正文 ≤12 字符，只有标题 | `overwrite` 目录页或内容脚手架 |
+| 首页 | 空间根节点“首页” | 按首页模板维护；全量索引 + `home` 结构图 |
+| 纯索引页 | 只有提示 + 页面指引 + 子页面索引 + 页面结构 | 全量后代索引 + `pure` 结构图 |
+| 半索引页 | 有实质正文，另有子页面索引 + 页面结构 | 保留正文；全量后代索引 + `semi` 结构图 |
+| 纯空白页 | 正文 ≤12 字符，只有标题 | `overwrite` 索引页或内容脚手架 |
 | 有效空白页 | 只有分节标题/`TBD.`，无实质内容 | 保留原分节标题，`overwrite` 脚手架 |
 | 默认模板首页 | 含“在首页你可以对空间进行说明”等占位文字 | `overwrite` 标准首页 |
-| 过时首页/目录页 | 计数、链接集合与实际节点不一致 | 首页精准编辑；空白目录直接重写 |
+| 过时索引页 | 计数、链接集合与实际节点不一致 | 首页精准编辑；空白目录直接重写 |
 | 薄页但有真实内容 | 有真实句子/链接，但内容很少 | **不改**，列入报告 |
 | 有实质内容页 | 制度、指南、手册、记录容器等 | **不改** |
 | 失效节点 | fetch 返回 3380002 等 | 不重建，记录并报告 |
 
 **硬规则：有实质内容的页面禁止 `overwrite`。** 需要修正时只用 `str_replace` / `block_replace` 做精准编辑，并先取基线。
 
-### 索引页标识（首页与目录页）
+### 索引页标识（三类）
 
-- 首页、目录页在 `<title>` 后的**第一个块**固定写 `<blockquote><p>本页为索引页</p></blockquote>`。
-- 该提示必须位于欢迎 callout / 页面指引之前；不要用 callout 代替 blockquote。
-- 内容脚手架、记录页、内容页不加此提示。
-- 存量首页/目录页已有该提示的保留，不重复插入。
+- 首页、纯索引页、半索引页在 `<title>` 后的**第一个块**固定写 `<blockquote><p>本页为索引页</p></blockquote>`。
+- 该提示必须位于欢迎 callout / 页面指引 / 正文之前；不要用 callout 代替 blockquote。
+- 内容脚手架、记录页、纯内容页不加此提示。
+- 存量索引页已有该提示的保留，不重复插入。
 
 ### 精简规则（非首页）
 
-- **目录页**：H2“页面指引”+ 指引段落 → H2“子页面索引”+ 三列彩色索引表（分类列按直接子页分组，`rowspan` + `light-blue`/`light-orange`/`light-green` 轮换）→ H2“页面结构”+ Mermaid mindmap；不写元数据、callout、维护说明、相关链接。
+- **纯索引页**：H2“页面指引”+ 指引段落 → H2“子页面索引”+ 三列彩色索引表（分类列按直接子页分组，`rowspan` + 颜色轮换）→ H2“页面结构”+ Mermaid mindmap；不写元数据、callout、维护说明、相关链接。
+- **半索引页**：保留原有正文，在正文末尾追加 H2“子页面索引”+ 全量后代索引表 → H2“页面结构”+ Mermaid mindmap；不改变正文顺序。
 - **内容脚手架**：只保留 H2“页面定位”、H2“适用对象”、H2“待补充说明”；不写元数据、callout、相关链接、维护说明。
 - **记录页**：一句使用说明 + H2“本期记录”+ H2“待跟进”；不写元数据、callout、相关链接、维护说明。
-- 索引表用 `scripts/render_index.py`，结构图用 `scripts/render_mindmap.py`；单表超过 80 行时按 [`references/xml-patterns.md`](references/xml-patterns.md) 的“大索引表分表”规则拆表。
+
+### 结构图节点预算
+
+索引表始终是全量导航；Mermaid 结构图按类型压缩，避免层级过深或宽分支刷屏。
+
+| 类型 | `render_mindmap.py` 预设 | 真实节点上限 | 每父分支 | 最大层级 |
+|---|---|---:|---:|---:|
+| 首页 | `--preset home` | 40 | 12 | 不限 |
+| 纯索引页 | `--preset pure` | 50 | 12 | 不限 |
+| 半索引页 | `--preset semi` | 30 | 12 | 3 |
+
+- 上限只计**真实 wiki 节点**；`……（其余 N 项见索引表）` 汇总叶不计入。
+- 超出预算或每父 12 个分支时，按 BFS 整组纳入并折叠为汇总叶；N 为该分支全部被省略的后代节点数。
+- 结构图被压缩时，页面必须补一句：“结构图按节点上限压缩显示；更多节点见索引表与左侧目录树。”
+- 索引表用 `scripts/render_index.py`；单表超过 80 行时按 [`references/xml-patterns.md`](references/xml-patterns.md) 的“大索引表分表”规则拆表。
 
 ## 流程总览
 
@@ -112,13 +130,13 @@ lark-cli docs +history-list --doc <OBJ_TOKEN> --page-size 1 --as user --format j
 
 ### Step 5：生成与预检
 
-按 [`references/page-templates.md`](references/page-templates.md) 选择模板。目录页索引表用 `scripts/render_index.py`，页面结构图用 `scripts/render_mindmap.py`。`render_index.py` 需要租户 wiki 根地址：`--base-url "https://<tenant>.feishu.cn/wiki/"` 或环境变量 `LARK_WIKI_BASE_URL`。XML 写本地文件，用 `@文件` 传参，避免 shell 转义。
+按 [`references/page-templates.md`](references/page-templates.md) 选择模板。索引表用 `scripts/render_index.py`；结构图用 `scripts/render_mindmap.py --preset home|pure|semi`。`render_index.py` 需要租户 wiki 根地址：`--base-url "https://<tenant>.feishu.cn/wiki/"` 或环境变量 `LARK_WIKI_BASE_URL`。XML 写本地文件，用 `@文件` 传参，避免 shell 转义。
 
 ```bash
 lark-cli docs +script --command parse --content @draft.xml --as user --format json
 ```
 
-要求 `data.assessment.status = passed`。检查：`<title>` 与节点标题一致、`&` 已转义、mindmap 顶格且无 Tab、rowspan 与缺失单元格一致、首页/目录页标题后第一个块是“本页为索引页”blockquote。
+要求 `data.assessment.status = passed`。检查：`<title>` 与节点标题一致、`&` 已转义、mindmap 顶格且无 Tab、rowspan 与缺失单元格一致、首页/纯索引页/半索引页标题后第一个块是“本页为索引页”blockquote。
 
 ### Step 6：写入
 
@@ -147,10 +165,12 @@ lark-cli docs +fetch --doc <OBJ_TOKEN> --as user --doc-format xml --format json
 逐页核对：
 
 - `<title>` 与 wiki 节点标题一致。
-- 首页/目录页标题后第一个块是 `<blockquote><p>本页为索引页</p></blockquote>`，且只出现一次。
-- 目录页索引行数 = 实际后代节点数；目录页 mindmap 分支数 = 实际后代节点数；首页索引行数 = 非首页节点数。
+- 首页/纯索引页/半索引页标题后第一个块是 `<blockquote><p>本页为索引页</p></blockquote>`，且只出现一次。
+- 首页索引行数 = 非首页节点数；纯索引页/半索引页索引行数 = 全部后代节点数。
 - 多张分表时，各表数据行之和 = 预期行数；每张分表都有表头，rowspan 按组内行数计算。
-- 目录页有“页面指引 / 子页面索引 / 页面结构”三个 H2，且索引表分类列有 `rowspan` 和颜色。
+- 结构图真实节点数 ≤ 类型上限；被截断时汇总叶存在，且汇总叶不计入上限。
+- 结构图被压缩的页面有说明句：“结构图按节点上限压缩显示；更多节点见索引表与左侧目录树。”
+- 纯索引页有“页面指引 / 子页面索引 / 页面结构”三个 H2；半索引页保留原正文并追加两个索引 H2。
 - 所有内链 token 都属于当前空间/允许的跨空间页面；失效 token 为 0。
 - 内容脚手架只有 3 个 H2：页面定位、适用对象、待补充说明。
 - 记录页只有“本期记录/待跟进”2 个 H2，且没有编造记录。
@@ -182,6 +202,8 @@ lark-cli docs +history-revert --doc <OBJ_TOKEN> \
 | 链接 | 内链用 `https://<域名>/wiki/<node_token>`；不要用 obj_token 拼 wiki 链接 |
 | 配额 | 遇到 99991403 立即停止，不循环重试 |
 | 超大表 | 单表数据行 > 80 时拆成多张同结构表；300+ 行单表会触发 5000000 文档引擎错误 |
+| 导图上限 | 首页/纯索引/半索引真实节点上限 40/50/30，每父最多 12 个分支；汇总叶不计入上限 |
+| 汇总叶 | `……（其余 N 项见索引表）` 是合成标签，不是 wiki 节点；N 统计该分支全部被省略的后代；允许重复文案，不去重 |
 | append 丢正文 | 末块为表格/画板时 `append` 可能清空原正文；内容页追加索引改用 `block_insert_after` 锚定最后一个块，写后必须核对原正文关键词 |
 | rowspan=1 | 飞书会省略 `rowspan="1"`；回读校验时，三列且首格无 rowspan 的行按 1 计 |
 | 无标题节点 | 空标题节点不写入索引/mindmap，在报告中单列“未命名空白节点待整理” |
@@ -198,8 +220,8 @@ lark-cli docs +history-revert --doc <OBJ_TOKEN> \
 | [`templates/`](templates/) | 可直接复制的 XML 骨架 |
 | [`scripts/audit.py`](scripts/audit.py) | 只读盘点并生成 manifest |
 | [`scripts/render_index.py`](scripts/render_index.py) | 从 manifest 生成目录/首页索引表 XML |
-| [`scripts/render_mindmap.py`](scripts/render_mindmap.py) | 从 manifest 生成目录/首页的 Mermaid mindmap 分支行 |
+| [`scripts/render_mindmap.py`](scripts/render_mindmap.py) | 按 `home/pure/semi` 预设生成带节点预算与汇总叶的 Mermaid 分支行 |
 
 ## 完成后汇报
 
-空间名与 space_id、写入页数、未改页数、首页索引数/mindmap 节点数、每页 revision 与 history anchor、验证结果、薄页与失效节点清单。若只完成试点，明确暂停并等待用户验收。
+空间名与 space_id、三类索引页数量、写入页数、未改页数、索引行数、结构图真实节点/汇总叶/总节点、每页 revision 与 history anchor、验证结果、薄页与失效节点清单。若只完成试点，明确暂停并等待用户验收。

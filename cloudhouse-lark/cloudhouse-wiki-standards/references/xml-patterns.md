@@ -27,7 +27,7 @@
 5. 全角括号 （）安全；顿号、`+`、`/`、`-` 均安全。
 6. 标题含 `&` 时，mindmap 用“与”代替（如“团队知识&记忆”→“团队知识与记忆”）；索引表保留原名并转义为 `&amp;`。
 7. 根节点用 `root((名字))` 圆形样式；名字里不要出现括号。
-8. 覆盖空间**全部**节点（root 代表首页本身，不单列）。
+8. 索引表始终是全量；结构图按类型节点预算压缩（见下节“节点预算与汇总叶”），root 代表页面本身，不单列。
 
 ### 更新已有画板
 
@@ -36,7 +36,33 @@ lark-cli docs +whiteboard-update --whiteboard-token <TOKEN> \
   --input_format mermaid --source @mindmap.txt --overwrite --as user
 ```
 
+`render_mindmap.py` 输出的是分支行；`whiteboard +update` 需要完整文档，先在文件头补 `mindmap` 和 `root((页面标题))`。
+
 失败时用 `block_replace` 把画板块替换为新的 `<whiteboard type="mermaid">`，记录新 token。
+
+### 节点预算与汇总叶
+
+`render_mindmap.py` 用 BFS + 整组纳入控制节点预算：
+
+| 类型 | 预设 | 真实节点上限 | 每父分支 | 最大层级 |
+|---|---|---:|---:|---:|
+| 首页 | `home` | 40 | 12 | 不限 |
+| 纯索引页 | `pure` | 50 | 12 | 不限 |
+| 半索引页 | `semi` | 30 | 12 | 3 |
+
+- 上限只计真实 wiki 节点；汇总叶不计入。
+- 超出预算或每父 12 个分支时，在最近的已纳入祖先下生成：
+  `……（其余 N 项见索引表）`
+- N 是该分支全部被省略的后代节点数（含各层）；根级未纳入分支汇总在 root 下。
+- 汇总叶是合成标签，不是 wiki 节点；允许重复文案，回读时按出现次数校验。
+- 结构图被压缩时，页面补一句：“结构图按节点上限压缩显示；更多节点见索引表与左侧目录树。”
+- stderr 必须满足 `invariant=True`；校验真实节点数 = `real`，总数 = `real + summaries + 1`。
+
+```bash
+python3 scripts/render_mindmap.py \
+  --manifest manifest.json --target-node <NODE_TOKEN> \
+  --preset pure --out mindmap-branches.mmd
+```
 
 ## 二、全量文档索引表
 
@@ -102,7 +128,7 @@ lark-cli docs +whiteboard-update --whiteboard-token <TOKEN> \
 
 ## 三、页面级模式
 
-### 索引页标识（首页 / 目录页）
+### 索引页标识（首页 / 纯索引页 / 半索引页）
 
 ```xml
 <title><标题></title>
@@ -110,7 +136,7 @@ lark-cli docs +whiteboard-update --whiteboard-token <TOKEN> \
 ```
 
 - 必须在标题后的第一个块，位于欢迎 callout / 页面指引之前。
-- 只用 blockquote，不用 callout；首页、目录页加，内容页/记录页不加。
+- 只用 blockquote，不用 callout；首页、纯索引页、半索引页加，内容页/记录页不加。
 - 精准编辑时用 `block_insert_after --block-id <title_id>` 插入；写入前先检查正文是否已有该提示。
 
 ### 元数据 blockquote（不再使用）
@@ -127,9 +153,9 @@ lark-cli docs +whiteboard-update --whiteboard-token <TOKEN> \
 
 可用 emoji（实测稳定）：📚 🌱 📝 💡 ✅ ❌ ⚠️ 📌 ❓ 👍 ❤️ 🏁 ⭐。**🛠️ 等不支持，会静默回落为 💡**。
 
-### 目录页结构（不使用 callout）
+### 纯索引页结构（不使用 callout）
 
-目录页固定三部分：页面指引 → 子页面索引 → 页面结构；不写元数据/说明 callout/维护说明/相关链接。
+纯索引页固定三部分：页面指引 → 子页面索引 → 页面结构；不写元数据/说明 callout/维护说明/相关链接。半索引页保留正文，再追加后两部分。
 
 ```xml
 <h2>页面指引</h2>
@@ -187,7 +213,7 @@ lark-cli docs +whiteboard-update --whiteboard-token <TOKEN> \
 - 每张表都保留完整 `<thead>`（分类 / 文档 / 说明）。
 - 按分组打包，每表 ≤80 行；一个分组超过 80 行时切成多个 chunk，续表的分类单元格重复组名。
 - 分类列 `rowspan` = 该组在**本表内**的行数。
-- 写入时先 `block_delete` 旧表，再按逆序 `block_insert_after` 到锚点（首页=计数段落，目录页=“子页面索引”H2），最终顺序才是正序。
+- 写入时先 `block_delete` 旧表，再按逆序 `block_insert_after` 到锚点（首页=计数段落，纯索引/半索引=“子页面索引”H2），最终顺序才是正序。
 - 回读校验：各表数据行之和 = 预期行数；飞书会省略 `rowspan="1"`，三列且首格无 rowspan 的行按 1 计。
 
 ### 内容页追加索引（不要用 append）
@@ -244,8 +270,9 @@ lark-cli docs +update --doc <OBJ> --command append \
   - [ ] `rowspan` 与缺失单元格数一致
   - [ ] 链接数 = 非首页节点数 / 后代节点数
   - [ ] `<title>` 与 wiki 节点标题一致
-  - [ ] 首页/目录页标题后第一个块是“本页为索引页”blockquote
+  - [ ] 首页/纯索引页/半索引页标题后第一个块是“本页为索引页”blockquote
   - [ ] 单表 ≤80 行；分表时各表行数之和 = 预期行数
+  - [ ] 结构图真实节点 ≤ 类型上限（40/50/30）；超限有汇总叶和压缩说明句
   - [ ] callout emoji 在可用列表内
   - [ ] 正文无裸 `TBD/TODO/待定/暂无`
 
@@ -270,7 +297,14 @@ lark-cli docs +update --doc <OBJ> --command append \
 - 标题后插入“本页为索引页”blockquote；计数改为 332 / 330，并注明 1 个未命名节点待整理。
 - 索引按 12 个语义分组打包成 5 张表（行数 48/80/62/80/60），每表 ≤80 行、都有表头；超过 80 行的大分组各拆成两张。
 - `block_delete` 旧表后，以计数段落为锚点逆序插入 5 张新表。
-- `whiteboard +update` 写入 330 分支 mindmap；raw 导出校验 `mind_map` 节点数 = 331（含 root）。
-- 回读：5 张表数据行之和 = 330；链接集合与全部已命名非首页节点完全一致；`rowspan=1` 被省略，校验时按 1 计。
+- `whiteboard +update` 写入 `--preset home` 结构图：330 → 39 个真实节点 + 7 个汇总叶 + root = 47。
+- 回读：5 张表数据行之和 = 330；链接集合与全部已命名非首页节点完全一致；结构图真实节点 ≤40；`rowspan=1` 被省略，校验时按 1 计。
 
 排除的 13 个有子节点的页面（真题年份、项目归档、简历模板、竞赛汇总等）属于内容页，不按索引页改造；仅更新 28 个真正的导航索引页。
+
+### 案例 E：宽分支折叠（课业知识 / 校园制度）
+
+- 课业知识：136 个直接子页 → 显示前 12 个 + `……（其余 124 项见索引表）`，真实节点 12、总节点 14。
+- 校园制度：33 个直接子页 → 显示前 12 个 + `……（其余 21 项见索引表）`，真实节点 12、总节点 14。
+- 索引表仍列全部 136 / 33 行；结构图只做入口概览。
+- 验证：raw 导出 `mind_map` 节点数 = 真实 + 汇总叶 + 1；汇总文案在对应父节点下只出现一次。

@@ -1,18 +1,19 @@
 # 页面模板与占位符
 
-四类模板位于 `templates/`。模板使用 `{{PLACEHOLDER}}` 占位，写入前逐项替换；索引表由 `scripts/render_index.py` 生成，或按 `references/xml-patterns.md` 手工拼装。
+模板位于 `templates/`。模板使用 `{{PLACEHOLDER}}` 占位，写入前逐项替换；索引表由 `scripts/render_index.py` 生成，或按 `references/xml-patterns.md` 手工拼装。
 
 ## 0. 通用占位符
 
 | 占位符 | 说明 | 示例 |
 |---|---|---|
 | `{{TITLE}}` | 与 wiki 节点标题完全一致 | `财务` |
-| `{{GUIDANCE}}` | 目录页页面指引（索引上方） | `本页汇总财务板块的报销入口与票据指南。` |
+| `{{GUIDANCE}}` | 纯索引页页面指引（索引上方） | `本页汇总财务板块的报销入口与票据指南。` |
 | `{{VERSION}}` | 首页页尾文档版本 `YYYYMMDD` | `20261023` |
 | `{{OWNER}}` | 首页页尾维护角色 | `空间管理员` |
 | `{{COUNT}}` | 首页非首页节点数 | `26` |
 | `{{INDEX_ROWS}}` | 索引表行 XML | 见 `render_index.py` |
 | `{{MINDMAP}}` | Mermaid mindmap 分支行（不含 `mindmap`/`root`） | 见 `render_mindmap.py` |
+| `{{MINDMAP_NOTE}}` | 结构图压缩说明句；未压缩时写“上方结构图展示主要层级；更多节点见索引表与左侧目录树。” | `结构图按节点上限压缩显示；更多节点见索引表与左侧目录树。` |
 
 **注意**：XML 文本里的 `&` 必须写 `&amp;`；`<title>` 内的 `&` 同样转义。
 
@@ -43,7 +44,7 @@
   root(({{SPACE_NAME}}))
     {{MINDMAP}}
 </whiteboard>
-<p>上方思维导图展示了知识库的完整层级结构；全部文档的直达链接见下方“⭐️ 常用文档和链接”。</p>
+<p>{{MINDMAP_NOTE}}</p>
 
 <h1>⭐️ 常用文档和链接</h1>
 <p>本空间共 <b>{{TOTAL}}</b> 个节点，其中首页 1 个；下表收录其余 <b>{{COUNT}}</b> 个节点，点击文档名即可跳转；带“└”的条目为上一行的子文档。</p>
@@ -91,12 +92,14 @@
 - 愿景 3 条必须来自已确认事实；没有依据时写“待补充”，不要编。
 - `TOTAL = COUNT + 1`（首页）。
 - 索引覆盖全部非首页节点；bitable 节点也要有链接。
+- Mermaid 用 `render_mindmap.py --preset home`：真实节点 ≤40、每父 ≤12；超限折叠为汇总叶。
 - Mermaid 节点文本避免 ASCII 括号、引号、`&`；`&` 用“与”代替。
+- `MINDMAP_NOTE` 在结构图被压缩时写“结构图按节点上限压缩显示；更多节点见索引表与左侧目录树。”
 - 已有实质内容的首页不要用本模板 overwrite，改用精准编辑。
 
-## 2. 目录页 `directory.xml`
+## 2. 纯索引页 `directory.xml`
 
-适用：有下级节点的目录页、章节目录页。**目录页固定为“页面指引 → 子页面索引 → 页面结构图”**，不写元数据、说明 callout、维护说明或相关链接。
+适用：只有索引内容的目录页、章节目录页。**纯索引页固定为“页面指引 → 子页面索引 → 页面结构图”**，不写元数据、说明 callout、维护说明或相关链接。
 
 ```xml
 <title>{{TITLE}}</title>
@@ -126,9 +129,10 @@
   root(({{TITLE}}))
 {{MINDMAP}}
 </whiteboard>
+<p>{{MINDMAP_NOTE}}</p>
 ```
 
-### 目录页规则
+### 纯索引页规则
 
 - `<title>` 后第一个块必须是“本页为索引页”blockquote，放在“页面指引”之前；已有则保留，不重复。
 - `GUIDANCE` 放 1–2 句页面指引，必须在“子页面索引”上方；已有真实引言/链接时保留原内容。
@@ -137,11 +141,44 @@
 - `INDEX_ROWS` 由 `scripts/render_index.py --mode directory` 生成，自带分类列和颜色。
 - 单表超过 80 行时改用分表：按分组打包成多张同结构表（每表 ≤80 行），每表都保留表头；分类被拆分时，续表的分类单元格重复组名，rowspan 按该表内的行数计算。
 - `render_index.py` 默认只输出单表行；超过 80 行时按 [`xml-patterns.md`](xml-patterns.md) 的“大索引表分表”自定义打包，或自行按分组切片。
-- `MINDMAP` 由 `scripts/render_mindmap.py` 生成（只含分支行，根节点由模板里的 `root(({{TITLE}}))` 提供）；分支覆盖全部后代节点。
+- `MINDMAP` 由 `scripts/render_mindmap.py --preset pure` 生成（只含分支行，根节点由模板里的 `root(({{TITLE}}))` 提供）；真实节点 ≤50、每父 ≤12，超限折叠为汇总叶。
+- `MINDMAP_NOTE` 在结构图被压缩时写“结构图按节点上限压缩显示；更多节点见索引表与左侧目录树。”
 - 说明列优先复用已有索引措辞；没有依据时用中性描述（“查看<标题>”），不编业务事实。
 - 不写“本页是……目录页，汇总 N 个页面”的 callout，不写维护说明，不写返回首页链接。
 - `<title>` 中的 `&` 写 `&amp;`；mindmap root 中的 `&` 用“与”代替。
-- 如果页面已有真实导语或实质内容，不要 overwrite；先确认是否属于可改的目录页。
+- 如果页面已有真实导语或实质内容，不要 overwrite；先确认是否属于可改的索引页。
+
+## 2.1 半索引页索引区
+
+适用：已有实质正文、又需要子页面导航的页面。正文保持原样，只在末尾追加以下片段：
+
+```xml
+<h2>子页面索引</h2>
+<table>
+  <colgroup><col width="180"/><col width="300"/><col width="300"/></colgroup>
+  <thead>
+    <tr>
+      <th background-color="light-gray"><p>分类</p></th>
+      <th background-color="light-gray"><p>文档</p></th>
+      <th background-color="light-gray"><p>说明</p></th>
+    </tr>
+  </thead>
+  <tbody>
+{{INDEX_ROWS}}
+  </tbody>
+</table>
+
+<h2>页面结构</h2>
+<whiteboard type="mermaid">mindmap
+  root(({{TITLE}}))
+{{MINDMAP}}
+</whiteboard>
+<p>{{MINDMAP_NOTE}}</p>
+```
+
+- 索引表仍是全量后代；结构图用 `--preset semi`：真实节点 ≤30、每父 ≤12、最多 3 层。
+- 用 `block_insert_after` 锚定正文最后一个块写入，不要用 `append`。
+- 不改变原正文顺序，不删除原有 callout/表格/图片。
 
 ## 3. 内容脚手架 `content-scaffold.xml`
 
@@ -167,7 +204,7 @@
 
 - 不写具体制度条款、审批链、金额、阈值、人名、日期。
 - `ONE_LINE_POSITION` 只能写标题可推导的定位，例如“本页用于汇总与项目管理工作流相关的流程与入口”。
-- 不写相关链接；需要跳转时由读者走目录页索引。
+- 不写相关链接；需要跳转时由读者走索引页。
 - 如果原页只有空分节标题（如考勤制度、Figma 使用规范），保留原 H2 标题，在每个 H2 下写“待补充：具体补什么”，不要改成分组结构。
 
 ## 4. 记录页 `record-page.xml`
@@ -260,7 +297,7 @@ python3 scripts/render_index.py \
   --out index.xml
 ```
 
-- `mode=directory`：列出 target 的全部后代节点。
+- `mode=directory`：列出 target 的全部后代节点（纯索引页与半索引页都用全量）。
 - `mode=home`：列出该空间全部非首页节点；默认按根节点分组，可用 `--groups` 指定更细的分组：
 
 ```bash
@@ -278,3 +315,33 @@ python3 scripts/render_index.py \
 `groups.json` 结构：`[{"title": "板块入口", "tokens": ["...", "..."]}, ...]`；`descriptions.json` 是 `{"<node_token>": "说明"}`。token 必须存在于 manifest，否则脚本报错。
 - 输出只包含 `<tr>...</tr>`，直接替换模板里的 `{{INDEX_ROWS}}`。
 - 说明列默认“查看<标题>”；可在 `descriptions.json` 或 manifest 的 `description` 字段覆盖。
+
+### 6.1 结构图分支生成
+
+```bash
+# 首页：真实节点 ≤40
+python3 scripts/render_mindmap.py \
+  --manifest manifest.json --target-node <HOME_NODE> \
+  --preset home --out mindmap-branches.mmd
+
+# 纯索引页：真实节点 ≤50
+python3 scripts/render_mindmap.py \
+  --manifest manifest.json --target-node <NODE_TOKEN> \
+  --preset pure --out mindmap-branches.mmd
+
+# 半索引页：真实节点 ≤30、最多 3 层
+python3 scripts/render_mindmap.py \
+  --manifest manifest.json --target-node <NODE_TOKEN> \
+  --preset semi --out mindmap-branches.mmd
+```
+
+- 可用 `--max-nodes`、`--max-children`、`--max-depth` 覆盖预设。
+- stderr 会打印 `real / summaries / omitted / total / invariant`；`invariant=True` 才可写入。
+- 超出预算的分支自动生成 `……（其余 N 项见索引表）` 汇总叶；索引表仍是全量。
+- 脚本输出的是**分支行**，不含 `mindmap`/`root`。用于 `whiteboard +update` 前需拼成完整文档：
+
+```text
+mindmap
+  root((页面标题))
+<分支行>
+```

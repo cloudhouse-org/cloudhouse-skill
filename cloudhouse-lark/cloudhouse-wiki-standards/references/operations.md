@@ -46,11 +46,14 @@ python3 "$SKILL_DIR/scripts/audit.py" \
 | `description` | 索引表说明列；可空 |
 | `expected_rows` | 目录/首页预期索引行数 |
 | `expected_links` | 预期链接 token，逗号分隔 |
+| `index_kind` | home / pure_index / semi_index / none |
+| `mindmap_preset` | home / pure / semi；非索引页为空 |
+| `mindmap_cap` | 结构图真实节点上限：40 / 50 / 30 |
 | `revision_id` | 写入前 revision |
 | `history_anchor` | 写入前 history_version_id |
 | `verified` | 验证结果 |
 
-`--check-index` 会额外抓取正文并比较页面内 `/wiki/<token>` 集合与真实后代/空间节点集合，标记过时索引。注意：用 `<cite>` 或画板表达结构的页面可能被误报为 outdated，这是提示而非结论；只对空白目录页/首页索引做强制校验。
+`--check-index` 会额外抓取正文并比较页面内 `/wiki/<token>` 集合与真实后代/空间节点集合，标记过时索引。注意：用 `<cite>` 或画板表达结构的页面可能被误报为 outdated，这是提示而非结论；只对空白索引页/首页索引做强制校验。
 
 ## 3. 分类与白名单
 
@@ -63,6 +66,8 @@ python3 "$SKILL_DIR/scripts/audit.py" \
 - 制度、指南、手册：`action=skip`。
 - 含评论、图片、画板、sheet、bitable：禁止 overwrite；需要改时用精准编辑。
 - 内容页即使有子节点（真题、附件、项目归档），也不按索引页改造；`page_type=directory` 只是有子节点，不代表是导航索引页。
+- `index_kind=home`：空间首页；`pure_index`：只有提示 + 页面指引 + 子页面索引 + 页面结构；`semi_index`：有正文 + 子页面索引 + 页面结构。半索引页必须保留原正文。
+- 纯索引页的“页面指引”只应有 1 段文字；若页面指引下有多段、表格、列表、三级标题或图片，归为半索引页（如课业知识）。
 - 空标题节点：跳过索引/mindmap，报告中单列；不要删除或改名。
 - fetch 失败：`status=broken`，`action=blocked`。
 
@@ -87,11 +92,12 @@ lark-cli docs +history-list --doc <OBJ_TOKEN> --page-size 1 --as user --format j
 
 ## 5. 生成草稿
 
-1. 选择模板：`templates/homepage.xml` / `directory.xml` / `content-scaffold.xml` / `record-page.xml`。
-2. 用 `scripts/render_index.py` 生成索引表行。
-3. 替换占位符；`&` 写 `&amp;`；`<title>` 与节点标题一致。
-4. 保存为 `drafts/<space_id>/<node_token>.xml`。
-5. 自检：目录行数、首页节点数、mindmap 节点数、链接 token、无裸 TBD。
+1. 选择模板：`templates/homepage.xml` / `directory.xml` / `content-scaffold.xml` / `record-page.xml`；半索引页复用 directory 的索引区。
+2. 用 `scripts/render_index.py` 生成全量索引表行（三类索引页都是全量）。
+3. 用 `scripts/render_mindmap.py --preset home|pure|semi` 生成结构图分支；检查 stderr 的 `invariant=True`。
+4. 替换占位符；`&` 写 `&amp;`；`<title>` 与节点标题一致。
+5. 保存为 `drafts/<space_id>/<node_token>.xml`。
+6. 自检：索引行数、结构图真实节点 ≤ 上限、汇总叶、链接 token、无裸 TBD。
 
 ## 6. 预检
 
@@ -131,8 +137,8 @@ lark-cli docs +update --doc <OBJ_TOKEN> --command block_replace \
   --block-id <BLOCK_ID> --content @section.xml --as user --format json
 ```
 
-- 首页/目录页的“本页为索引页”blockquote 必须插在标题后的第一个块。
-- 大表（>80 行）先 `block_delete` 旧表，再以计数段落（首页）或“子页面索引”H2（目录页）为锚点，**逆序** `block_insert_after` 多张分表。
+- 首页/纯索引页/半索引页的“本页为索引页”blockquote 必须插在标题后的第一个块。
+- 大表（>80 行）先 `block_delete` 旧表，再以计数段落（首页）或“子页面索引”H2（纯索引页/半索引页）为锚点，**逆序** `block_insert_after` 多张分表。
 
 - 结构变化后旧 block id 失效，重新 `fetch --detail with-ids`。
 - 表格/画板/段落可整体替换；行内文字用 `str_replace`。
@@ -175,27 +181,34 @@ lark-cli docs +fetch --doc <OBJ_TOKEN> --as user --doc-format xml --detail with-
 逐页检查：
 
 - `<title>` 与节点标题一致。
-- 首页/目录页标题后第一个块是“本页为索引页”blockquote，且只出现一次。
-- 目录/首页索引行数 = `expected_rows`；多张分表时各表数据行之和 = `expected_rows`。
+- 首页/纯索引页/半索引页标题后第一个块是“本页为索引页”blockquote，且只出现一次。
+- 首页/纯索引/半索引索引行数 = `expected_rows`；多张分表时各表数据行之和 = `expected_rows`。
 - 每张分表都有表头；分类列 rowspan 之和（含被省略的 rowspan=1） = 该表数据行数。
-- 目录页只有“页面指引 / 子页面索引 / 页面结构”三个 H2，顺序正确；无元数据、说明 callout、维护说明、相关链接。
-- 目录页索引表为三列（分类/文档/说明），分类列有 `rowspan` 和 `light-blue`/`light-orange`/`light-green` 颜色，表头为 `light-gray`。
+- 纯索引页只有“页面指引 / 子页面索引 / 页面结构”三个 H2，顺序正确；半索引页保留原正文并追加两个索引 H2。
+- 索引表为三列（分类/文档/说明），分类列有 `rowspan` 和 `light-blue`/`light-orange`/`light-green` 颜色，表头为 `light-gray`。
 - 表格底色不会在普通 `docs +fetch` 中返回；用 `--detail full` 检查 `background-color`（浅灰通常为 `rgba(245,246,247,0.9)`，浅蓝/浅橙/浅绿为 `rgb(240,244,255)` / `rgb(255,245,235)` / `rgb(240,251,239)`）。
-- 目录页 mindmap 分支数 = 后代节点数。
+- 结构图真实节点数 ≤ 类型上限（home 40 / pure 50 / semi 30）；超过时汇总叶存在且不计入上限。
+- 结构图被压缩的页面有“结构图按节点上限压缩显示”说明句。
 - 页面内 `/wiki/<token>` 集合 = `expected_links`。
 - 内容脚手架只有“页面定位/适用对象/待补充说明”3 个 H2；无元数据、callout、相关链接、维护说明。
 - 记录页只有“本期记录/待跟进”2 个 H2；有空表占位行；无元数据、callout、相关链接、维护说明。
 - 没有裸 `TBD`、`TODO`、`待定`、`暂无`。
 - 有实质内容页的 block 数量没有减少（精准编辑页）。
 
-### 8.2 首页 mindmap
+### 8.2 结构图
 
 ```bash
+# 预览目检
 lark-cli whiteboard +export --whiteboard-token <TOKEN> \
   --output-type preview --output preview.jpg --as user
+
+# 节点预算校验
+lark-cli whiteboard +export --whiteboard-token <TOKEN> \
+  --output-type raw --as user --format json
 ```
 
 用 Read 打开 `preview.jpg` 目检：层级正确、中文无乱码、没有“语法错误”占位框。导出扩展名用 `.jpg`。
+raw 导出中 `mind_map` 节点数 = 真实节点 + 汇总叶 + 1（root）；真实节点不超过类型上限。
 
 ### 8.3 写入结果记录
 
@@ -226,7 +239,7 @@ lark-cli docs +history-revert --doc <OBJ_TOKEN> \
 
 ## 10. 批量执行顺序
 
-1. 目录页（低风险，先验证索引生成）。
+1. 纯索引页（低风险，先验证索引生成）。
 2. 内容脚手架。
 3. 记录页。
 4. 首页（最后做，依赖前面节点结构）。
@@ -242,9 +255,9 @@ lark-cli docs +history-revert --doc <OBJ_TOKEN> \
 - [ ] 0 个裸 TBD/TODO
 - [ ] 0 个失效内链
 - [ ] 首页索引行数 = 非首页已命名节点数
-- [ ] 目录索引行数 = 后代已命名节点数
+- [ ] 纯索引/半索引索引行数 = 后代已命名节点数
 - [ ] 每页标题后第一个块是“本页为索引页”blockquote
 - [ ] 多张分表时各表行数之和 = 预期行数
-- [ ] mindmap 节点数 = 空间全部已命名节点数
+- [ ] 结构图真实节点 ≤ 40/50/30；汇总叶不计入；截断页有压缩说明句
 - [ ] 每页 revision / anchor 已记录
 - [ ] 薄页与 broken 节点已单列报告

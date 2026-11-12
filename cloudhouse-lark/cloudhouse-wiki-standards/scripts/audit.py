@@ -162,6 +162,41 @@ def classify(node, body_chars, content, descendants):
     return "content", "thin" if body_chars < 200 else "normal", "skip"
 
 
+def detect_index_kind(node, content):
+    """Classify navigation pages: home / pure_index / semi_index / none."""
+    if node.get("title") == "首页" and not node.get("parent_node_token"):
+        return "home", "home", 40
+    if not content or node.get("obj_type") != "docx":
+        return "none", "", ""
+    parts = re.split(r"^##\s+(.+?)\s*$", content, flags=re.M)
+    if len(parts) < 5:
+        return "none", "", ""
+    sections = {}
+    for i in range(1, len(parts) - 1, 2):
+        title = re.sub(r"[*_`#]+", "", parts[i]).strip()
+        if title:
+            sections[title] = parts[i + 1]
+    if "子页面索引" not in sections or "页面结构" not in sections:
+        return "none", "", ""
+    preamble = re.sub(r"^#\s+.*$", "", parts[0], flags=re.M)
+    preamble = re.sub(r"^>\s*本页为索引页\s*$", "", preamble, flags=re.M).strip()
+    pure = {"页面指引", "子页面索引", "页面结构"}
+    guide = sections.get("页面指引", "")
+    guide_blocks = [b for b in re.split(r"\n\s*\n", guide.strip()) if b.strip()]
+    guide_has_extra = bool(
+        len(guide_blocks) > 1
+        or re.search(r"^\s*\|.*\|\s*$", guide, re.M)
+        or re.search(r"^\s*(?:[-*+]|\d+\.)\s+", guide, re.M)
+        or re.search(r"^###", guide, re.M)
+        or "<table" in guide
+        or "<figure" in guide
+        or "![" in guide
+    )
+    if not preamble and "页面指引" in sections and set(sections) <= pure and not guide_has_extra:
+        return "pure_index", "pure", 50
+    return "semi_index", "semi", 30
+
+
 def index_status(node, content, all_nodes):
     if not content:
         return ""
@@ -233,6 +268,9 @@ def main():
         for node, (chars, err) in zip(nodes, char_results):
             content = doc_content(node) if args.check_index else ""
             page_type, status, action = classify(node, chars, content, nodes)
+            index_kind, mindmap_preset, mindmap_cap = (
+                detect_index_kind(node, content) if args.check_index else ("", "", "")
+            )
             rows.append({
                 "space_id": sid,
                 "space_name": space_name,
@@ -255,6 +293,9 @@ def main():
                 ]) if node.get("has_child") else 0,
                 "expected_links": "",
                 "index_status": index_status(node, content, nodes) if args.check_index else "",
+                "index_kind": index_kind,
+                "mindmap_preset": mindmap_preset,
+                "mindmap_cap": mindmap_cap,
                 "revision_id": "",
                 "history_anchor": "",
                 "verified": "",

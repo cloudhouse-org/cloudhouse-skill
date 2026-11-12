@@ -25,3 +25,4 @@
   root(({{TITLE}}))
 {{MINDMAP}}
 </whiteboard>
+<p>{{MINDMAP_NOTE}}</p>
